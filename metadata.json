@@ -1,0 +1,11 @@
+{
+  "name": "ZapFix Global - Emergency Trade Dispatch & AI Safety Guardian",
+  "description": "On-demand emergency trade dispatch with Gemini Safety Guardian triage, live telemetry, SHA-256 diagnostic auditing, escrow pre-auth, and banner ad studio.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

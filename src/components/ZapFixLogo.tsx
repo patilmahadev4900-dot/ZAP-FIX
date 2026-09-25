@@ -1,0 +1,119 @@
+import React from 'react';
+
+interface ZapFixLogoProps {
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  withText?: boolean;
+  className?: string;
+}
+
+export const ZapFixLogo: React.FC<ZapFixLogoProps> = ({
+  size = 'md',
+  withText = true,
+  className = '',
+}) => {
+  const sizeMap = {
+    sm: { box: 'w-8 h-8', z: 24, text: 'text-base' },
+    md: { box: 'w-11 h-11', z: 32, text: 'text-xl' },
+    lg: { box: 'w-16 h-16', z: 48, text: 'text-2xl' },
+    xl: { box: 'w-24 h-24', z: 72, text: 'text-3xl' },
+  };
+
+  const current = sizeMap[size];
+
+  return (
+    <div className={`flex items-center gap-3 ${className}`}>
+      {/* 3D Glossy Ribbon Z Emblem on Frosted Squircle (Asset 1) */}
+      <div
+        className={`${current.box} relative flex items-center justify-center rounded-[26%] bg-gradient-to-br from-slate-900 via-slate-950 to-black p-1.5 shadow-xl shadow-cyan-500/10 border border-white/15 overflow-hidden transition-transform duration-300 hover:scale-105`}
+        style={{
+          boxShadow: '0 8px 24px -4px rgba(0, 210, 255, 0.25), 0 4px 12px -2px rgba(155, 81, 224, 0.3)',
+        }}
+      >
+        {/* Ambient Backlight glow */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-purple-600/30 blur-md pointer-events-none" />
+
+        {/* 3D Ribbon Z SVG */}
+        <svg
+          viewBox="0 0 100 100"
+          className="w-full h-full relative z-10 filter drop-shadow-[0_2px_8px_rgba(0,210,255,0.4)]"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            {/* Top Loop Gradient: Vibrant Purple to Magenta */}
+            <linearGradient id="zapPurpleGrad" x1="20%" y1="10%" x2="90%" y2="80%">
+              <stop offset="0%" stopColor="#C084FC" />
+              <stop offset="40%" stopColor="#9B51E0" />
+              <stop offset="100%" stopColor="#6B21A8" />
+            </linearGradient>
+
+            {/* Bottom Loop Gradient: Electric Cyan to Deep Cerulean */}
+            <linearGradient id="zapCyanGrad" x1="10%" y1="20%" x2="90%" y2="90%">
+              <stop offset="0%" stopColor="#67E8F9" />
+              <stop offset="45%" stopColor="#00D2FF" />
+              <stop offset="100%" stopColor="#0284C7" />
+            </linearGradient>
+
+            {/* Diagonal Ribbon Gradient */}
+            <linearGradient id="zapDiagGrad" x1="20%" y1="20%" x2="80%" y2="80%">
+              <stop offset="0%" stopColor="#9B51E0" />
+              <stop offset="50%" stopColor="#38BDF8" />
+              <stop offset="100%" stopColor="#00D2FF" />
+            </linearGradient>
+
+            {/* Gloss Highlight */}
+            <linearGradient id="glossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {/* Upper Ribbon Wing (Purple curve) */}
+          <path
+            d="M 44 22 C 64 20 84 32 82 52 C 80 62 72 70 60 74 L 52 64 C 62 60 68 54 68 46 C 68 36 56 32 44 32 Z"
+            fill="url(#zapPurpleGrad)"
+          />
+
+          {/* Lower Ribbon Wing (Cyan curve) */}
+          <path
+            d="M 56 78 C 36 80 16 68 18 48 C 20 38 28 30 40 26 L 48 36 C 38 40 32 46 32 54 C 32 64 44 68 56 68 Z"
+            fill="url(#zapCyanGrad)"
+          />
+
+          {/* Central Dynamic Z Blade */}
+          <path
+            d="M 38 28 L 74 28 C 76 28 78 30 77 33 L 42 72 L 78 72 C 80 72 82 74 81 76 L 79 80 C 78 82 76 83 74 83 L 34 83 C 31 83 29 80 31 77 L 66 38 L 36 38 C 34 38 32 36 33 34 Z"
+            fill="url(#zapDiagGrad)"
+          />
+
+          {/* Specular 3D Reflection */}
+          <ellipse
+            cx="36"
+            cy="36"
+            rx="14"
+            ry="6"
+            transform="rotate(-25 36 36)"
+            fill="url(#glossGrad)"
+            opacity="0.6"
+          />
+        </svg>
+      </div>
+
+      {withText && (
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5">
+            <span className={`font-black tracking-tight ${current.text} text-slate-900 dark:text-white`}>
+              ZAP<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">FIX</span>
+            </span>
+            <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+              GLOBAL
+            </span>
+          </div>
+          <span className="text-[10px] font-medium tracking-wide text-slate-400 dark:text-slate-400 hidden sm:inline">
+            Emergency Trade Dispatch &amp; AI Guardian
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
