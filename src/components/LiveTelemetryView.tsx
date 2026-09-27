@@ -28,6 +28,12 @@ interface LiveTelemetryViewProps {
   onUpdateBooking: (updated: DispatchBooking) => void;
   onViewInvoice: () => void;
   onOpenGuardian: () => void;
+  onCancelDispatch: (result: {
+    fee: number;
+    refund: number;
+    distanceMiles: number;
+    reason: string;
+  }) => void;
 }
 
 export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
@@ -35,6 +41,7 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
   onUpdateBooking,
   onViewInvoice,
   onOpenGuardian,
+  onCancelDispatch,
 }) => {
   // Telemetry animation state
   const [distanceKm, setDistanceKm] = useState(booking.distanceKm || 2.4);
@@ -42,6 +49,16 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
   const [isCalling, setIsCalling] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isSmsOpen, setIsSmsOpen] = useState(false);
+  
+  // Proximity-based Cancellation State
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Conversion: 1 km = 0.621371 miles
+  const distanceMiles = Number((distanceKm * 0.621371).toFixed(2));
+  const isProximityLate = distanceMiles <= 0.5;
+  const cancellationFee = isProximityLate ? 25.0 : 0.0;
+  const refundAmount = Number((75.0 - cancellationFee).toFixed(2));
   const [smsMessages, setSmsMessages] = useState<Array<{ sender: 'user' | 'tech'; text: string; time: string }>>([
     { sender: 'tech', text: `Hello Vishnu, this is Rajesh from ZapFix. I've accepted your emergency dispatch and I'm en route with full diagnostic gear. ETA ~11 mins.`, time: '10:20 AM' },
   ]);
@@ -454,20 +471,88 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
             <div className="p-2 rounded-xl bg-slate-800/60">
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Distance</span>
               <div className="text-base font-black text-white">
-                {distanceKm} km
+                {distanceMiles} mi
               </div>
+              <span className="text-[9px] text-slate-400 block -mt-0.5">({distanceKm} km)</span>
             </div>
           </div>
 
-          {/* Quick Demo Fast-Forward Button */}
+          {/* Outlined "Cancel Dispatch" button below the ETA card */}
           {booking.status === 'LIVE_TELEMETRY' && (
             <button
-              onClick={handleTriggerArrival}
-              className="w-full py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+              onClick={() => setShowCancelModal(true)}
+              className="w-full py-2.5 px-3 rounded-xl border-2 border-rose-500/50 hover:border-rose-400 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-100 text-xs font-black tracking-wide flex items-center justify-between transition-all shadow-md active:scale-98"
             >
-              <Navigation className="w-3.5 h-3.5" />
-              <span>Simulate Vehicle Arrival (25m Gate Geofence)</span>
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                <span>Cancel Dispatch</span>
+              </span>
+              <span
+                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                  isProximityLate
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                    : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                }`}
+              >
+                {isProximityLate ? '$25 Transit Fee' : '$0 Free Cancel'}
+              </span>
             </button>
+          )}
+
+          {/* Quick Proximity Distance Simulators to easily test Case A & Case B */}
+          {booking.status === 'LIVE_TELEMETRY' && (
+            <div className="pt-1 border-t border-slate-800/80 space-y-1.5">
+              <div className="flex items-center justify-between text-[9px] uppercase font-bold text-slate-400 px-0.5">
+                <span>Distance Simulator:</span>
+                <span className={isProximityLate ? 'text-amber-400' : 'text-emerald-400'}>
+                  {isProximityLate ? 'Case B (≤ 0.5 mi)' : 'Case A (> 0.5 mi)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDistanceKm(0.6); // 0.6 km = 0.37 miles <= 0.5 mi (Case B)
+                    setEtaSeconds(90);
+                  }}
+                  className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold flex items-center justify-center gap-1 transition-all ${
+                    isProximityLate
+                      ? 'bg-amber-500/30 border-amber-400 text-amber-200'
+                      : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+                  }`}
+                  title="Test Case B: Proximity <= 0.5 miles ($25 transit fee)"
+                >
+                  <AlertCircle className="w-3 h-3 text-amber-400" />
+                  <span>Test ≤ 0.5 mi</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDistanceKm(2.4); // 2.4 km = 1.49 miles > 0.5 mi (Case A)
+                    setEtaSeconds(680);
+                  }}
+                  className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold flex items-center justify-center gap-1 transition-all ${
+                    !isProximityLate
+                      ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200'
+                      : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300'
+                  }`}
+                  title="Test Case A: Distance > 0.5 miles ($0 free cancellation)"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <span>Test &gt; 0.5 mi</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTriggerArrival}
+                className="w-full py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Navigation className="w-3 h-3" />
+                <span>Simulate Arrival (0 mi)</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -512,6 +597,49 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* OUTLINED CANCEL DISPATCH BAR BELOW MAP CONTAINER */}
+      {booking.status === 'LIVE_TELEMETRY' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+              isProximityLate
+                ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+            }`}>
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-slate-900 dark:text-white">
+                  Dispatch Cancellation Policy
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  isProximityLate
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                }`}>
+                  {isProximityLate ? '≤ 0.5 mi (Late Proximity)' : '> 0.5 mi (100% Free)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Live Distance: <strong>{distanceMiles} miles</strong> ({distanceKm} km) • {isProximityLate ? '$25 transit compensation applies' : 'Full $75.00 escrow refund with $0 fee'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowCancelModal(true)}
+            className="px-4 py-2.5 rounded-2xl border-2 border-rose-500/40 hover:border-rose-500 bg-rose-500/5 hover:bg-rose-500/15 text-rose-600 dark:text-rose-400 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shrink-0 active:scale-98 shadow-sm"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-500" />
+            <span>Cancel Dispatch</span>
+            <span className="text-[10px] opacity-80">
+              ({isProximityLate ? '$25 fee' : '$0 fee'})
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* STEP 6 & 7: ON-SITE WORK & PARTS PROPOSAL */}
       {(booking.status === 'ARRIVED_ON_SITE' ||
@@ -842,6 +970,152 @@ export const LiveTelemetryView: React.FC<LiveTelemetryViewProps> = ({
               >
                 <Send className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROXIMITY-BASED CANCELLATION CONFIRMATION MODAL */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden space-y-0">
+            {/* Dynamic Modal Header */}
+            <div
+              className={`p-5 text-white ${
+                isProximityLate
+                  ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600'
+                  : 'bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900'
+              } relative`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                      isProximityLate
+                        ? 'bg-white/20 text-white'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                      {isProximityLate ? 'CASE B • PROXIMITY CANCELLATION' : 'CASE A • EARLY CANCELLATION'}
+                    </span>
+                    <h3 className="text-base font-black text-white mt-0.5">
+                      Confirm Dispatch Cancellation?
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Distance Display Callout */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
+                <span className="text-slate-500 font-medium">Technician Current Distance:</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {distanceMiles} miles away ({distanceKm} km)
+                </span>
+              </div>
+
+              {/* Exact required modal message */}
+              <div
+                className={`p-4 rounded-2xl border ${
+                  isProximityLate
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+                }`}
+              >
+                <p className="text-xs font-bold leading-relaxed">
+                  {isProximityLate
+                    ? '⚠️ Technician is within 0.5 miles of your location. A $25.00 transit compensation fee will be deducted for the technician, and the remaining $50.00 will be refunded.'
+                    : 'Technician is still far en route. Your full $75.00 escrow pre-auth hold will be released with $0 penalty.'}
+                </p>
+              </div>
+
+              {/* Financial Escrow Breakdown */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <div className="flex justify-between text-slate-500">
+                  <span>Escrow Pre-Auth Hold:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">$75.00 USD</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>
+                    {isProximityLate ? 'Technician Transit Protection Fee:' : 'Cancellation Penalty:'}
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      isProximityLate ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    {isProximityLate ? '-$25.00 USD' : '$0.00 (Free)'}
+                  </span>
+                </div>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between font-black text-sm text-slate-900 dark:text-white">
+                  <span>Net Refund to Customer:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    ${refundAmount.toFixed(2)} USD
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400 text-right">
+                  Credit applied immediately back to Visa •••• 4917
+                </div>
+              </div>
+
+              {/* Action Buttons: Keep Dispatch and Confirm Cancellation */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  disabled={isCancelling}
+                  className="py-3 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all shadow-sm"
+                >
+                  Keep Dispatch
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCancelling(true);
+                    setTimeout(() => {
+                      setIsCancelling(false);
+                      setShowCancelModal(false);
+                      onCancelDispatch({
+                        fee: cancellationFee,
+                        refund: refundAmount,
+                        distanceMiles,
+                        reason: isProximityLate
+                          ? 'Proximity Cancellation (<= 0.5 miles)'
+                          : 'Early Cancellation (> 0.5 miles)',
+                      });
+                    }, 400);
+                  }}
+                  disabled={isCancelling}
+                  className={`py-3 rounded-2xl font-black text-xs text-white shadow-lg transition-all flex items-center justify-center gap-1.5 ${
+                    isProximityLate
+                      ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:opacity-95 shadow-amber-600/25'
+                      : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/25'
+                  }`}
+                >
+                  {isCancelling ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Releasing Hold...</span>
+                    </>
+                  ) : (
+                    <span>Confirm Cancellation</span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

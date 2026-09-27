@@ -20,7 +20,9 @@ import {
   FileCheck,
   Edit3,
   X,
-  Save
+  Save,
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { USER_PROFILE_DEFAULT } from '../data/constants';
 
@@ -30,6 +32,7 @@ interface ProfileViewProps {
   onOpenGuardian: () => void;
   runtimeApiKey: string;
   onUpdateApiKey: (key: string) => void;
+  onOpenApkModal?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -38,6 +41,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenGuardian,
   runtimeApiKey,
   onUpdateApiKey,
+  onOpenApkModal,
 }) => {
   const [profile, setProfile] = useState(USER_PROFILE_DEFAULT);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -269,6 +273,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
           </label>
         </div>
+
+        {/* Android APK Download & Installation */}
+        <button
+          onClick={onOpenApkModal}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Download Android APK / Install App</span>
+                <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-bold">
+                  WebAPK
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Install directly on phone or download standalone APK package
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </button>
 
         {/* Detailed Profile View Trigger */}
         <button

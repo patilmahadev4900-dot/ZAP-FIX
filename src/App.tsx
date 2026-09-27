@@ -26,9 +26,10 @@ import {
   Navigation,
   FileText,
   User,
-  Layers,
   PhoneCall,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle,
+  X
 } from 'lucide-react';
 
 import { ZapFixLogo } from './components/ZapFixLogo';
@@ -38,6 +39,7 @@ import { LiveTelemetryView } from './components/LiveTelemetryView';
 import { InvoiceView } from './components/InvoiceView';
 import { ProfileView } from './components/ProfileView';
 import { BannerStudioModal } from './components/BannerStudioModal';
+import { AndroidApkModal } from './components/AndroidApkModal';
 
 import { TRADE_CATEGORIES, SAVED_LOCATIONS, USER_PROFILE_DEFAULT } from './data/constants';
 import { TradeCategory, DispatchBooking } from './types';
@@ -58,12 +60,22 @@ export default function App() {
   const [isGuardianOpen, setIsGuardianOpen] = useState(false);
   const [guardianCategory, setGuardianCategory] = useState('Electrical Emergency');
   const [isBannerStudioOpen, setIsBannerStudioOpen] = useState(false);
+  const [isApkModalOpen, setIsApkModalOpen] = useState(false);
 
   // Dark Mode
   const [darkMode, setDarkMode] = useState(false);
 
   // Runtime API Key from Profile/Settings (Point B)
   const [runtimeApiKey, setRuntimeApiKey] = useState(USER_PROFILE_DEFAULT.preconfiguredApiKey);
+
+  // Proximity Cancellation Banner State
+  const [cancellationBanner, setCancellationBanner] = useState<{
+    fee: number;
+    refund: number;
+    distanceMiles: number;
+    reason: string;
+    timestamp: string;
+  } | null>(null);
 
   // Icon mapping helper for 15 categories
   const renderCategoryIcon = (iconName: string) => {
@@ -99,9 +111,25 @@ export default function App() {
   };
 
   const handleBookingConfirmed = (booking: DispatchBooking) => {
+    setCancellationBanner(null);
     setCurrentBooking(booking);
     setActiveCategory(null);
     setActiveTab('live-track');
+  };
+
+  const handleCancelDispatch = (result: {
+    fee: number;
+    refund: number;
+    distanceMiles: number;
+    reason: string;
+  }) => {
+    setCancellationBanner({
+      ...result,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+    setCurrentBooking(null);
+    setActiveCategory(null);
+    setActiveTab('services');
   };
 
   const handleOpenGuardian = (catName?: string) => {
@@ -127,28 +155,38 @@ export default function App() {
             <ZapFixLogo size="md" withText={true} />
           </div>
 
-          {/* Quick Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Banner Ad Studio Button */}
+          {/* Quick Header Actions: Official Gemini 1.5 Flash Badge & VP Profile Avatar */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            {/* Official Gemini 1.5 Flash Badge */}
             <button
-              onClick={() => setIsBannerStudioOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
-              title="Generate standard banner ads in all sizes from product/URL"
-            >
-              <Layers className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="hidden sm:inline">Ad Banner Studio</span>
-              <span className="text-[10px] font-black uppercase bg-purple-600 text-white px-1.5 py-0.2 rounded">
-                1K-4K
-              </span>
-            </button>
-
-            {/* Safety Guardian AI Header Button */}
-            <button
+              type="button"
               onClick={() => handleOpenGuardian('General Emergency')}
-              className="px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition-all"
+              title="Powered by Google Gemini 1.5 Flash - Click to open Safety Guardian"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/90 dark:hover:bg-slate-700/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm transition-all duration-200 active:scale-95 group"
             >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-500 animate-pulse" />
-              <span className="hidden md:inline">Safety Guardian</span>
+              {/* Official Google Gemini 4-pointed sparkle star logo SVG */}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 duration-200"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <linearGradient id="geminiOfficialGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#1BA1E3" />
+                    <stop offset="30%" stopColor="#5B72F4" />
+                    <stop offset="65%" stopColor="#9B51E0" />
+                    <stop offset="100%" stopColor="#FA5560" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M12 1.5C12 7.299 16.701 12 22.5 12C16.701 12 12 16.701 12 22.5C12 16.701 7.299 12 1.5 12C7.299 12 12 7.299 12 1.5Z"
+                  fill="url(#geminiOfficialGrad)"
+                />
+              </svg>
+              <span className="text-xs font-semibold tracking-tight text-slate-800 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white transition-colors">
+                Gemini 1.5 Flash
+              </span>
             </button>
 
             {/* Profile Avatar / Quick Link */}
@@ -189,6 +227,7 @@ export default function App() {
               onUpdateBooking={(updated) => setCurrentBooking(updated)}
               onViewInvoice={() => setActiveTab('invoices')}
               onOpenGuardian={() => handleOpenGuardian(currentBooking.category.name)}
+              onCancelDispatch={handleCancelDispatch}
             />
           ) : (
             <div className="text-center py-16 space-y-4">
@@ -249,17 +288,83 @@ export default function App() {
             onOpenGuardian={() => handleOpenGuardian('Emergency Protocol')}
             runtimeApiKey={runtimeApiKey}
             onUpdateApiKey={(k) => setRuntimeApiKey(k)}
+            onOpenApkModal={() => setIsApkModalOpen(true)}
           />
         ) : (
           /* VIEW 5: SERVICES DASHBOARD (DEFAULT HOME) */
           <div className="space-y-6">
             
+            {/* PROXIMITY CANCELLATION STATUS BANNER */}
+            {cancellationBanner && (
+              <div
+                className={`p-5 rounded-3xl border shadow-xl flex items-start justify-between gap-4 animate-in fade-in slide-in-from-top-3 duration-300 ${
+                  cancellationBanner.fee > 0
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100'
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                }`}
+              >
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${
+                      cancellationBanner.fee > 0
+                        ? 'bg-amber-500 text-slate-950 font-bold'
+                        : 'bg-emerald-500 text-white font-bold'
+                    }`}
+                  >
+                    {cancellationBanner.fee > 0 ? (
+                      <AlertTriangle className="w-5 h-5 text-slate-950" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          cancellationBanner.fee > 0
+                            ? 'bg-amber-200/60 dark:bg-amber-900/60 border-amber-400 text-amber-900 dark:text-amber-200'
+                            : 'bg-emerald-200/60 dark:bg-emerald-900/60 border-emerald-400 text-emerald-900 dark:text-emerald-200'
+                        }`}
+                      >
+                        {cancellationBanner.fee > 0 ? 'PROXIMITY COMPENSATION DEDUCTED' : '100% FREE CANCELLATION'}
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                        {cancellationBanner.timestamp}
+                      </span>
+                    </div>
+
+                    <h4 className="text-base font-black tracking-tight">
+                      {cancellationBanner.fee > 0
+                        ? `Dispatch Cancelled: $25.00 Transit Compensation Fee Deducted, $50.00 Refunded`
+                        : `Dispatch Cancelled: Full $75.00 Escrow Pre-Auth Hold Released ($0 Penalty)`}
+                    </h4>
+
+                    <p className="text-xs leading-relaxed opacity-90 max-w-xl">
+                      {cancellationBanner.fee > 0
+                        ? `Technician was within 0.5 miles (${cancellationBanner.distanceMiles} mi) of your emergency location. A $25.00 transit compensation fee was transferred to cover technician fuel and travel. Your remaining $50.00 pre-authorization balance has been refunded back to Visa •••• 4917.`
+                        : `Technician was still far en route (${cancellationBanner.distanceMiles} miles away, > 0.5 miles). Zero penalty applied. 100% of your $75.00 pre-authorization hold has been released with $0 fee.`}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCancellationBanner(null)}
+                  className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0"
+                  title="Dismiss banner"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {/* POINT A: PROMINENT GEMINI 1.5 FLASH SAFETY GUARDIAN BANNER */}
-            <div className="relative rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white p-6 shadow-2xl border border-cyan-500/30 overflow-hidden">
+            <div className="relative rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white p-6 sm:p-7 shadow-2xl border border-cyan-500/30 overflow-hidden">
               <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-cyan-500/20 via-purple-600/20 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2 max-w-lg">
+              <div className="relative z-10 flex flex-col gap-5">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-400/30">
                       POINT A • SAFETY GUARDIAN
@@ -274,29 +379,21 @@ export default function App() {
                     Emergency Hazard Isolation in Seconds
                   </h1>
 
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
                     Experiencing active sparking, gas leaks, or pipe ruptures? Launch instant AI containment instructions to safeguard life and property while your master technician travels.
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
-                  <button
-                    onClick={() => handleOpenGuardian('Electrical Emergency')}
-                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-purple-600 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/30 hover:opacity-95 flex items-center justify-center gap-2 transition-transform active:scale-95"
-                  >
-                    <ShieldAlert className="w-4 h-4 text-slate-950" />
-                    <span>Launch Safety Triage</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-950" />
-                  </button>
-
-                  <button
-                    onClick={() => setIsBannerStudioOpen(true)}
-                    className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/15 flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-purple-300" />
-                    <span>Pro Marketing Banner Studio</span>
-                  </button>
-                </div>
+                {/* Primary Prominent Full-Width Action Button */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenGuardian('Electrical Emergency')}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-purple-500 text-slate-950 font-black text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:opacity-95 flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-[0.99] group cursor-pointer"
+                >
+                  <ShieldAlert className="w-4 h-4 text-slate-950 transition-transform group-hover:scale-110" />
+                  <span>Launch Safety Triage</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950 transition-transform group-hover:translate-x-1" />
+                </button>
               </div>
             </div>
 
@@ -512,6 +609,12 @@ export default function App() {
         isOpen={isBannerStudioOpen}
         onClose={() => setIsBannerStudioOpen(false)}
         customApiKey={runtimeApiKey}
+      />
+
+      {/* Android APK Download & WebAPK Install Modal */}
+      <AndroidApkModal
+        isOpen={isApkModalOpen}
+        onClose={() => setIsApkModalOpen(false)}
       />
 
     </div>

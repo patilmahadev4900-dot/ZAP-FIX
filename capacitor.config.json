@@ -1,0 +1,15 @@
+{
+  "appId": "global.zapfix.twa",
+  "appName": "ZapFix Global",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://ais-dev-i7vw4hqasxsxhhsdeyzwtg-128735648072.asia-east1.run.app",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
